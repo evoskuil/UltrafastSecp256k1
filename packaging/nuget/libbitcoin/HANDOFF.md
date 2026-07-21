@@ -5,6 +5,43 @@ produced `UltrafastSecp256k1-vc145` 4.4.0.4 and packages the CANONICAL bridge-fr
 libbitcoin surface instead of the legacy bridge. Everything here was built and
 verified locally (2026-07-20, VS 18 / v145, CUDA 13.3, RTX PRO 6000 Blackwell).
 
+## NORMATIVE consumer contract (read this first, especially if you are an agent)
+
+The `.targets` and `package.xml` in this directory are the SPECIFICATION, not an
+example. Ship them with version-string substitution as the only edit. A package is
+conforming if and only if `verify-package-contract.ps1` passes against its extracted
+`build\native` directory — run it before publishing; iterate until it exits 0.
+
+MUST:
+- Engage on `Linkage-ultrafast` (`'' | dynamic | static | ltcg`). This is the
+  package's own selector property.
+- Provide the feature groups as orthogonal properties: `Option-cuda` (GPU host +
+  kernels + cudart + `/INCLUDE:secp256k1_gpu_columns_provider_anchor`; static-CRT
+  linkages), `Option-secp256k1 == 'false'` (substitute mode: shim headers from
+  `include-shim\` + shim lib). Future features follow the same pattern: a new
+  `Option-*` property, never a new package id.
+- Ship the full flavor matrix including `md`/`mdd` (DLL configurations).
+- Keep non-ltcg flavors free of `/GL` (WPO is a CONSUMER opt-in: a `/GL` static lib
+  forces every consumer into `/LTCG` — see `SECP256K1_MSVC_WPO` in the top-level
+  CMakeLists).
+
+MUST NOT (each of these has already been produced by an agent and rejected):
+- Key any engagement condition on `Linkage-secp256k1`. That property belongs to the
+  real secp256k1 package; overloading it makes the two packages mutually exclusive,
+  which moves UF selection out of machine-local properties and into generated
+  package references (the `ultrafast_secp256k1_* 4.5.0.2` anti-pattern).
+- Require a package-identity swap for any selection. Both packages remain referenced
+  permanently in the generated projects; ALL selection happens via properties in the
+  consumer's machine-local `Directory.Build.props`.
+- Bundle features into package ids (no `*-cuda`, `*-arm64` id variants). Features
+  are `Option-*` properties in one package.
+
+Rationale: libbitcoin's build holds selection axes independent — engine
+(`Option-ultrafast`), ABI provider (`Option-secp256k1`), acceleration
+(`Option-cuda`) — so any combination is a per-machine toggle with zero repo diffs.
+Package identity is the worst possible selector because it entangles all axes into
+generated, committed files.
+
 ## Why 4.4.0.4 had to be replaced
 
 - It shipped the LEGACY bridge (`ufsecp_lbtc_ctrl_*`) as a CPU-only build: the bridge
