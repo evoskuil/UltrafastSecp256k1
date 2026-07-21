@@ -51,6 +51,15 @@ Key CMake ingredients (see the script for the full argument set):
   fallback. First CUDA touch costs ~250 ms one-time context init per process.
 - Defines: the targets emit `WITH_ULTRAFAST` (libbitcoin's have.hpp maps it to
   `HAVE_ULTRAFAST`).
+- **Substitute mode** (`Option-secp256k1 == 'false'` with ultrafast engaged): the
+  package provides the libsecp256k1 interface itself — shim headers from
+  `include-shim\` (kept separate so they can never collide with the real secp256k1
+  package) plus the `secp256k1_shim` lib (v4.5 shim over the engine; built via
+  `SECP256K1_BUILD_LIBBITCOIN_BRIDGE=ON`, only the shim is staged). This preserves
+  the original libbitcoin contract: enabling ultrafast and deselecting secp256k1
+  makes UltrafastSecp256k1 a full drop-in substitute. With secp256k1 left enabled,
+  both packages coexist (the canonical build exports no `secp256k1_*` symbols).
+  The shim headers require C++ (they overlay the engine's C++ headers).
 
 ## Local source fixes carried in this fork (upstream these to shrec)
 
@@ -88,6 +97,11 @@ group instead and require the toolkit on build machines.
   toolkit): single verify OK; columns 500k → 18 M sig/s steady-state after the
   one-time context init. CRT directives verified per flavor (LIBCMT/LIBCMTD/MSVCRT);
   anchor symbol present; device-link members present in the archives.
+- v4.5 shim soak (substitute mode surface, 300k unique-input sign/verify via the
+  libsecp256k1 API): flat ~30 µs/verify, flat memory/handles — the leak-like
+  degradation observed on the 4.4-era shim does not reproduce.
+- libbitcoin-system built in substitute mode (secp256k1 fully disengaged, UF shim +
+  canonical batch + CUDA) — crypto/signature/threshold test suites all pass.
 
 ## Still pending on the libbitcoin side (Eric)
 
