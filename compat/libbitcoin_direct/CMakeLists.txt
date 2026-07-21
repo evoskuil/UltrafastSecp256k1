@@ -61,7 +61,13 @@ if(SECP256K1_BUILD_LIBBITCOIN_GPU)
         # the hook. (The ufsecp C ABI path retains the same object via a source-level anchor
         # reference in ufsecp_gpu_impl.cpp — see src/gpu/src/gpu_engine_hook.cpp and
         # src/gpu/CMakeLists.txt "LBTC-GPU-SELFINSTALL-DROP".)
-        set(_lbtc_gpu_retain "LINKER:--undefined=secp256k1_gpu_columns_provider_anchor")
+        # MSVC link.exe has no --undefined; /INCLUDE is its targeted-retention equivalent
+        # (silently-ignored --undefined leaves the hook dead-stripped: CPU-only, no error).
+        if(MSVC)
+            set(_lbtc_gpu_retain "LINKER:/INCLUDE:secp256k1_gpu_columns_provider_anchor")
+        else()
+            set(_lbtc_gpu_retain "LINKER:--undefined=secp256k1_gpu_columns_provider_anchor")
+        endif()
         # Enable the seven libbitcoin public-data batch-op GPU trampolines in
         # gpu_engine_hook.cpp (guarded by SECP256K1_LBTC_GPU_OPS) and give that TU
         # the include path for <ufsecp/lbtc_gpu_ops.hpp>. Both are target-level
