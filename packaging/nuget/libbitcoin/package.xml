@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ProjectSchemaDefinitions xmlns="clr-namespace:Microsoft.Build.Framework.XamlTypes;assembly=Microsoft.Build.Framework">
+  <Rule Name="Linkage-ultrafast-uiextension" PageTemplate="tool"
+        DisplayName="NuGet Dependencies" SwitchPrefix="/" Order="1">
+    <Rule.Categories>
+      <Category Name="UltrafastSecp256k1" DisplayName="UltrafastSecp256k1" />
+    </Rule.Categories>
+    <Rule.DataSource>
+      <DataSource Persistence="ProjectFile" ItemType="" />
+    </Rule.DataSource>
+    <EnumProperty Name="Linkage-ultrafast"
+                  DisplayName="Linkage"
+                  Description="How NuGet UltrafastSecp256k1 will be linked into the output of this project"
+                  Category="UltrafastSecp256k1">
+      <EnumValue Name=""        DisplayName="Not linked" />
+      <EnumValue Name="dynamic" DisplayName="Static engine, dynamic CRT (for DLL configurations)" />
+      <EnumValue Name="static"  DisplayName="Static (LIB)" />
+      <EnumValue Name="ltcg"    DisplayName="Static using link time compile generation (LTCG)" />
+    </EnumProperty>
+    <EnumProperty Name="Option-cuda"
+                  DisplayName="CUDA Acceleration"
+                  Description="Link the CUDA GPU backend (internal math engine; transparent CPU fallback). Requires NVIDIA driver at runtime. Static-CRT linkages only."
+                  Category="UltrafastSecp256k1">
+      <EnumValue Name="false" DisplayName="No" />
+      <EnumValue Name="true"  DisplayName="Yes" />
+    </EnumProperty>
+  </Rule>
+</ProjectSchemaDefinitions>

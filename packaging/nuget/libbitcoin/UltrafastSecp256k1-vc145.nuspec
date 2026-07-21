@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd">
+  <metadata>
+    <id>UltrafastSecp256k1-vc145</id>
+    <version>4.5.0.0</version>
+    <title>UltrafastSecp256k1 (libbitcoin canonical surface, MSVC v145)</title>
+    <authors>shrec</authors>
+    <owners>shrec</owners>
+    <license type="expression">MIT</license>
+    <projectUrl>https://github.com/shrec/UltrafastSecp256k1</projectUrl>
+    <description>
+UltrafastSecp256k1 for libbitcoin MSVC builds (PlatformToolset v145, x64).
+Canonical bridge-free surface: header-only ufsecp::lbtc::* (ufsecp/libbitcoin.hpp)
+over the static engine. Optional transparent CUDA acceleration via Option-cuda
+(internal math engine; CPU fallback; requires NVIDIA driver at runtime only).
+Engagement via Linkage-ultrafast ('' | dynamic | static | ltcg).
+    </description>
+    <summary>UltrafastSecp256k1 canonical libbitcoin integration for MSVC v145</summary>
+    <releaseNotes>https://github.com/shrec/UltrafastSecp256k1/blob/main/CHANGELOG.md</releaseNotes>
+    <copyright>Copyright (c) 2025-2026 shrec</copyright>
+    <tags>secp256k1 ecdsa schnorr bitcoin libbitcoin cryptography native cuda gpu</tags>
+    <repository type="git" url="https://github.com/shrec/UltrafastSecp256k1.git" />
+  </metadata>
+  <files>
+    <file src="build\native\**" target="build\native" />
+    <file src="docs\**" target="docs" />
+  </files>
+</package>

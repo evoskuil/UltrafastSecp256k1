@@ -1,0 +1,97 @@
+# UltrafastSecp256k1-vc145 NuGet — canonical libbitcoin packaging (v4.5.0.0)
+
+Handoff for the package maintainer. This directory replaces the ad-hoc process that
+produced `UltrafastSecp256k1-vc145` 4.4.0.4 and packages the CANONICAL bridge-free
+libbitcoin surface instead of the legacy bridge. Everything here was built and
+verified locally (2026-07-20, VS 18 / v145, CUDA 13.3, RTX PRO 6000 Blackwell).
+
+## Why 4.4.0.4 had to be replaced
+
+- It shipped the LEGACY bridge (`ufsecp_lbtc_ctrl_*`) as a CPU-only build: the bridge
+  lib contained zero GPU symbols, and the `secp256k1_cuda` lib it carried was the raw
+  kernel archive that nothing referenced — the linker discarded it. GPU could never
+  bind (`UFSECP_ERR_GPU_UNAVAILABLE`), silently.
+- Upstream has since moved libbitcoin integration to a canonical, bridge-free
+  header-only surface: `ufsecp::lbtc::*` via `<ufsecp/libbitcoin.hpp>`, GPU as an
+  internal math engine with transparent CPU fallback (see
+  `docs/LIBBITCOIN_INTEGRATION.md`). libbitcoin-system migrates its `batch.cpp`
+  accordingly (coordinated with Eric).
+
+## The pipeline
+
+`build-nuget-vc145.ps1` — six configs (static /MT, static-debug /MTd, ltcg /MT+/GL,
+ltcg-debug, dynamic /MD, dynamic-debug /MDd; CUDA in the four static-CRT configs),
+stages `build/native/{bin,include,UltrafastSecp256k1-vc145.targets,package.xml}`,
+packs a cosmetic .nupkg, and with `-Install` copies the extracted layout into the
+local libbitcoin package cache (`<evoskuil>\.nuget\packages`; restore is disabled
+there — packages are consumed pre-extracted).
+
+Key CMake ingredients (see the script for the full argument set):
+- `-DSECP256K1_BUILD_LIBBITCOIN=ON` (+`_GPU=ON`, `-DSECP256K1_BUILD_CUDA=ON`)
+- `-DCMAKE_CUDA_RESOLVE_DEVICE_SYMBOLS=ON` — REQUIRED: embeds the device-link object
+  in each static archive so plain-link.exe consumers work (they cannot device-link).
+- `-DCMAKE_CUDA_ARCHITECTURES=89-real;120-real;120-virtual` (Ada + Blackwell + PTX).
+- All eight `SECP256K1_GPU_BUILD_*` modules OFF — the upstream-designed "minimal node
+  GPU" surface. REQUIRED: the libbitcoin profile strips those kernels, and leaving
+  the dispatch flags ON makes the GPU host reference missing kernels at link.
+- Debug configs override `CMAKE_CUDA_FLAGS_DEBUG` to drop `/RTC1` (upstream forces
+  `-O3` on CUDA in all configs; nvcc forwards `/O2` to the MSVC host → D8016).
+- `-DCMAKE_MSVC_RUNTIME_LIBRARY=...` per config (upstream defaults /MD).
+
+## Consumer contract (matches the libbitcoin props conventions)
+
+- `Linkage-ultrafast` ∈ `'' | dynamic | static | ltcg` — engagement + engine flavor.
+  `dynamic` = /MD-CRT STATIC archive for DLL configurations (the engine is
+  static-only by design). No `cuda` linkage value (removed).
+- `Option-cuda == 'true'` (static/ltcg only): links `secp256k1_gpu_host` +
+  `secp256k1_cuda` + `cudart_static.lib` and forces
+  `/INCLUDE:secp256k1_gpu_columns_provider_anchor` (retains the self-installing
+  GpuColumnsVerifyHook that a normal static link would dead-strip). GPU is
+  API-invisible: transparent acceleration of `*_verify_columns`, silent CPU
+  fallback. First CUDA touch costs ~250 ms one-time context init per process.
+- Defines: the targets emit `WITH_ULTRAFAST` (libbitcoin's have.hpp maps it to
+  `HAVE_ULTRAFAST`).
+
+## Local source fixes carried in this fork (upstream these to shrec)
+
+1. `src/cuda/include/secp256k1.cuh` — parameter renamed `small` → `factor`:
+   `windows.h` (via `secure_erase.hpp`) pulls `rpcndr.h`, which `#define small char`.
+   Broke every Windows GPU-host compile; nobody had ever built Windows CUDA.
+2. `compat/libbitcoin_direct/CMakeLists.txt` — hook retention flag is GNU-ld-only
+   (`--undefined=`); MSVC needs `LINKER:/INCLUDE:...`. Without it MSVC silently
+   dead-strips the hook (exactly the 4.4.0.4 failure mode, reproduced from source).
+3. Suggested upstream (not source-fixable here): a compile-only `windows-cuda` CI job
+   (hosted runners need no GPU to compile) — every defect above was invisible to
+   upstream's Linux-only GPU CI.
+
+## Licensing gate before any publication
+
+`cudart_static.lib` is copied from the local CUDA Toolkit into `bin\` so consumers
+need no toolkit. Fine for local/team use; before publishing beyond that, verify the
+CUDA EULA redistributable attachment covers the STATIC runtime lib for the toolkit
+version used (the DLL runtime is unambiguously listed; the static lib must be
+confirmed, not assumed). Fallback: reference `$(CUDA_PATH)\lib\x64` in the cuda
+group instead and require the toolkit on build machines.
+
+## Verification performed (all green)
+
+- UF CTests from the static-release tree: `lbtc_direct_verify`,
+  `lbtc_direct_operations`, `lbtc_direct_gpu_columns_hook` (hook self-install).
+- `bench_lbtc_direct_batch` (1M sigs, pool 50k): ECDSA columns 23.6 M sig/s,
+  Schnorr columns 29.3 M sig/s (GPU, thread-count invariant); CPU row path
+  2.0–2.6 M sig/s at 128 threads, ~33 µs/sig single-thread.
+- Degradation soak (canonical single-verify, 300k unique inputs, 15 passes): flat
+  rate (~40 µs/verify), flat working set, flat handle count. (The leak-like 2×
+  slowdown Eric measured over a sync was on the 4.4-era engine/shim and does not
+  reproduce on the v4.5 canonical path.)
+- Consumer smoke built ONLY from the installed package (plain cl/link, no repo, no
+  toolkit): single verify OK; columns 500k → 18 M sig/s steady-state after the
+  one-time context init. CRT directives verified per flavor (LIBCMT/LIBCMTD/MSVCRT);
+  anchor symbol present; device-link members present in the archives.
+
+## Still pending on the libbitcoin side (Eric)
+
+version4.xml v145 package version → 4.5.0.0 + regeneration; removal of the interim
+props mapping (`Option-cuda` → `Linkage-ultrafast=cuda`) and the interim
+`$(CUDA_PATH)` lib path in the machine-local Directory.Build.props; `batch.cpp`
+migration to `ufsecp::lbtc::*_verify_columns`; full-stack build verification.

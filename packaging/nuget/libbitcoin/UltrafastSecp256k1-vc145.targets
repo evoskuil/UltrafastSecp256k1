@@ -1,0 +1,118 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <PropertyPageSchema Include="$(MSBuildThisFileDirectory)package.xml" />
+  </ItemGroup>
+
+  <!-- Canonical bridge-free surface: <ufsecp/libbitcoin.hpp> (ufsecp::lbtc::*) + static engine. -->
+  <ItemDefinitionGroup Condition="'$(Platform)' == 'x64' And '$(Linkage-ultrafast)' != ''">
+    <ClCompile>
+      <PreprocessorDefinitions>WITH_ULTRAFAST;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>$(MSBuildThisFileDirectory)include\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+    <Link>
+      <AdditionalLibraryDirectories>$(MSBuildThisFileDirectory)bin\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+    </Link>
+  </ItemDefinitionGroup>
+
+  <!-- Substitute mode: when the consumer deselects secp256k1, UltrafastSecp256k1 provides
+       the libsecp256k1 interface itself (shim headers + implementation over the engine). -->
+  <ItemDefinitionGroup Condition="'$(Platform)' == 'x64' And '$(Linkage-ultrafast)' != '' And '$(Option-secp256k1)' == 'false'">
+    <ClCompile>
+      <AdditionalIncludeDirectories>$(MSBuildThisFileDirectory)include-shim\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Platform)' == 'x64' And '$(PlatformToolset)' == 'v145' And '$(Linkage-ultrafast)' == 'static' And '$(Option-secp256k1)' == 'false' And $(Configuration.IndexOf('Release')) != -1">
+    <Link>
+      <AdditionalDependencies>secp256k1_shim-x64-v145-mt-s-4_5_0_0.static.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Platform)' == 'x64' And '$(PlatformToolset)' == 'v145' And '$(Linkage-ultrafast)' == 'static' And '$(Option-secp256k1)' == 'false' And $(Configuration.IndexOf('Debug')) != -1">
+    <Link>
+      <AdditionalDependencies>secp256k1_shim-x64-v145-mt-sgd-4_5_0_0.static.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Platform)' == 'x64' And '$(PlatformToolset)' == 'v145' And '$(Linkage-ultrafast)' == 'ltcg' And '$(Option-secp256k1)' == 'false' And $(Configuration.IndexOf('Release')) != -1">
+    <Link>
+      <AdditionalDependencies>secp256k1_shim-x64-v145-mt-s-4_5_0_0.ltcg.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Platform)' == 'x64' And '$(PlatformToolset)' == 'v145' And '$(Linkage-ultrafast)' == 'ltcg' And '$(Option-secp256k1)' == 'false' And $(Configuration.IndexOf('Debug')) != -1">
+    <Link>
+      <AdditionalDependencies>secp256k1_shim-x64-v145-mt-sgd-4_5_0_0.ltcg.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Platform)' == 'x64' And '$(PlatformToolset)' == 'v145' And '$(Linkage-ultrafast)' == 'dynamic' And '$(Option-secp256k1)' == 'false' And $(Configuration.IndexOf('Release')) != -1">
+    <Link>
+      <AdditionalDependencies>secp256k1_shim-x64-v145-md-4_5_0_0.static.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Platform)' == 'x64' And '$(PlatformToolset)' == 'v145' And '$(Linkage-ultrafast)' == 'dynamic' And '$(Option-secp256k1)' == 'false' And $(Configuration.IndexOf('Debug')) != -1">
+    <Link>
+      <AdditionalDependencies>secp256k1_shim-x64-v145-mdd-4_5_0_0.static.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+
+  <!-- Engine linkage. The engine is a static archive in all flavors; 'dynamic' selects the
+       dynamic-CRT (md/mdd) archive for DLL configurations. -->
+  <ItemDefinitionGroup Condition="'$(Platform)' == 'x64' And '$(PlatformToolset)' == 'v145' And '$(Linkage-ultrafast)' == 'static' And $(Configuration.IndexOf('Release')) != -1">
+    <Link>
+      <AdditionalDependencies>fastsecp256k1-x64-v145-mt-s-4_5_0_0.static.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Platform)' == 'x64' And '$(PlatformToolset)' == 'v145' And '$(Linkage-ultrafast)' == 'static' And $(Configuration.IndexOf('Debug')) != -1">
+    <Link>
+      <AdditionalDependencies>fastsecp256k1-x64-v145-mt-sgd-4_5_0_0.static.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Platform)' == 'x64' And '$(PlatformToolset)' == 'v145' And '$(Linkage-ultrafast)' == 'ltcg' And $(Configuration.IndexOf('Release')) != -1">
+    <Link>
+      <AdditionalDependencies>fastsecp256k1-x64-v145-mt-s-4_5_0_0.ltcg.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Platform)' == 'x64' And '$(PlatformToolset)' == 'v145' And '$(Linkage-ultrafast)' == 'ltcg' And $(Configuration.IndexOf('Debug')) != -1">
+    <Link>
+      <AdditionalDependencies>fastsecp256k1-x64-v145-mt-sgd-4_5_0_0.ltcg.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Platform)' == 'x64' And '$(PlatformToolset)' == 'v145' And '$(Linkage-ultrafast)' == 'dynamic' And $(Configuration.IndexOf('Release')) != -1">
+    <Link>
+      <AdditionalDependencies>fastsecp256k1-x64-v145-md-4_5_0_0.static.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Platform)' == 'x64' And '$(PlatformToolset)' == 'v145' And '$(Linkage-ultrafast)' == 'dynamic' And $(Configuration.IndexOf('Debug')) != -1">
+    <Link>
+      <AdditionalDependencies>fastsecp256k1-x64-v145-mdd-4_5_0_0.static.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+
+  <!-- CUDA acceleration (optional feature within ultrafast). GPU is an internal math engine:
+       no API change, transparent CPU fallback. The /INCLUDE anchor retains the self-installing
+       GpuColumnsVerifyHook object, which a normal static link would otherwise discard.
+       Static-CRT flavors only (the CUDA backend links cudart_static). -->
+  <ItemDefinitionGroup Condition="'$(Platform)' == 'x64' And '$(PlatformToolset)' == 'v145' And '$(Option-cuda)' == 'true' And ('$(Linkage-ultrafast)' == 'static' Or '$(Linkage-ultrafast)' == 'ltcg')">
+    <Link>
+      <AdditionalOptions>/INCLUDE:secp256k1_gpu_columns_provider_anchor %(AdditionalOptions)</AdditionalOptions>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Platform)' == 'x64' And '$(PlatformToolset)' == 'v145' And '$(Option-cuda)' == 'true' And '$(Linkage-ultrafast)' == 'static' And $(Configuration.IndexOf('Release')) != -1">
+    <Link>
+      <AdditionalDependencies>secp256k1_gpu_host-x64-v145-mt-s-4_5_0_0.static.lib;secp256k1_cuda-x64-v145-mt-s-4_5_0_0.static.lib;cudart_static.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Platform)' == 'x64' And '$(PlatformToolset)' == 'v145' And '$(Option-cuda)' == 'true' And '$(Linkage-ultrafast)' == 'static' And $(Configuration.IndexOf('Debug')) != -1">
+    <Link>
+      <AdditionalDependencies>secp256k1_gpu_host-x64-v145-mt-sgd-4_5_0_0.static.lib;secp256k1_cuda-x64-v145-mt-sgd-4_5_0_0.static.lib;cudart_static.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Platform)' == 'x64' And '$(PlatformToolset)' == 'v145' And '$(Option-cuda)' == 'true' And '$(Linkage-ultrafast)' == 'ltcg' And $(Configuration.IndexOf('Release')) != -1">
+    <Link>
+      <AdditionalDependencies>secp256k1_gpu_host-x64-v145-mt-s-4_5_0_0.ltcg.lib;secp256k1_cuda-x64-v145-mt-s-4_5_0_0.ltcg.lib;cudart_static.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Platform)' == 'x64' And '$(PlatformToolset)' == 'v145' And '$(Option-cuda)' == 'true' And '$(Linkage-ultrafast)' == 'ltcg' And $(Configuration.IndexOf('Debug')) != -1">
+    <Link>
+      <AdditionalDependencies>secp256k1_gpu_host-x64-v145-mt-sgd-4_5_0_0.ltcg.lib;secp256k1_cuda-x64-v145-mt-sgd-4_5_0_0.ltcg.lib;cudart_static.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+</Project>
