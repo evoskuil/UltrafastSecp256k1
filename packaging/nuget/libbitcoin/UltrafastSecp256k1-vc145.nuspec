@@ -6,7 +6,11 @@
     <title>UltrafastSecp256k1 (libbitcoin canonical surface, MSVC v145)</title>
     <authors>shrec</authors>
     <owners>shrec</owners>
-    <license type="expression">MIT</license>
+    <!-- File, not the MIT expression: the package bundles cudart_static.lib,
+         which is NVIDIA-proprietary (CUDA Toolkit EULA, Attachment A
+         distributable) — a blanket MIT expression would misstate its terms.
+         LICENSE.txt = MIT for UltrafastSecp256k1 + NVIDIA third-party notice. -->
+    <license type="file">LICENSE.txt</license>
     <projectUrl>https://github.com/shrec/UltrafastSecp256k1</projectUrl>
     <description>
 UltrafastSecp256k1 for libbitcoin MSVC builds (PlatformToolset v145, x64).
@@ -22,6 +26,7 @@ Engagement via Linkage-ultrafast ('' | dynamic | static | ltcg).
     <repository type="git" url="https://github.com/shrec/UltrafastSecp256k1.git" />
   </metadata>
   <files>
+    <file src="LICENSE.txt" target="" />
     <file src="build\native\**" target="build\native" />
     <file src="docs\**" target="docs" />
   </files>

@@ -1,0 +1,49 @@
+UltrafastSecp256k1
+==================
+
+MIT License
+
+Copyright (c) 2026 Vano Chkheidze
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+
+THIRD-PARTY SOFTWARE NOTICES
+============================
+
+This package includes the following third-party component, which is NOT
+covered by the MIT license above:
+
+  build/native/bin/cudart_static.lib
+
+    NVIDIA CUDA Runtime static library, a component of the NVIDIA CUDA
+    Toolkit. Copyright (c) NVIDIA Corporation. Proprietary software licensed
+    under the NVIDIA CUDA Toolkit End User License Agreement (EULA):
+
+      https://docs.nvidia.com/cuda/eula/index.html
+
+    The CUDA Runtime (including cudart_static.lib) is enumerated in
+    Attachment A of the EULA as a distributable component. It is included
+    here solely for incorporation, in object code form, into applications
+    built against this package's CUDA-accelerated configuration
+    (Option-cuda). Use and further distribution of this component are
+    governed exclusively by the NVIDIA EULA, not by the MIT license.
+
+All other contents of this package are original UltrafastSecp256k1 artifacts
+under the MIT license above.

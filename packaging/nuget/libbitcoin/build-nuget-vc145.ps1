@@ -154,14 +154,68 @@ Copy-Item "$env:CUDA_PATH\lib\x64\cudart_static.lib" "$stage\build\native\bin\" 
 Copy-Item "$PSScriptRoot\package.xml" "$stage\build\native\" -Force
 (Get-Content "$PSScriptRoot\$packageId.nuspec" -Raw).Replace("4.5.0.0", $Version) |
     Set-Content "$stage\$packageId.nuspec" -Encoding utf8 -NoNewline
+# MIT + NVIDIA third-party notice (cudart_static.lib): referenced by the
+# nuspec's <license type="file"> — a blanket MIT expression would misstate
+# the bundled NVIDIA-proprietary runtime's terms.
+Copy-Item "$PSScriptRoot\LICENSE.txt" "$stage\" -Force
 New-Item -ItemType Directory -Force "$stage\docs" | Out-Null
 Copy-Item "$repo\docs\LIBBITCOIN_INTEGRATION.md" "$stage\docs\" -Force
 
-# Pack (cosmetic archive; the libbitcoin cache consumes the extracted layout).
+# Pack a VALID OPC .nupkg (uploadable to nuget.org). The local libbitcoin cache
+# still consumes the extracted layout; this replaces the former Compress-Archive
+# zip, which lacked the OPC parts ([Content_Types].xml, _rels, psmdcp) and was
+# rejected by nuget.org. Parts are written explicitly over ZipArchive:
+# System.IO.Packaging requires IsolatedStorage for large parts (unavailable in
+# restricted shells) and nuget.exe is not present on the build box.
+Add-Type -AssemblyName System.IO.Compression
+Add-Type -AssemblyName System.IO.Compression.FileSystem
 $nupkg = Join-Path $buildRoot "package\$packageId.$Version.nupkg"
 if (Test-Path $nupkg) { Remove-Item $nupkg -Force }
-Compress-Archive -Path "$stage\*" -DestinationPath "$nupkg.zip" -Force
-Move-Item "$nupkg.zip" $nupkg -Force
+
+$payload = @(Get-Item "$stage\$packageId.nuspec") + @(Get-Item "$stage\LICENSE.txt") +
+    @(Get-ChildItem "$stage\build" -Recurse -File) + @(Get-ChildItem "$stage\docs" -Recurse -File)
+
+$extensions = $payload | ForEach-Object { $_.Extension.TrimStart('.').ToLowerInvariant() } |
+    Where-Object { $_ } | Sort-Object -Unique
+$typeLines = ($extensions | ForEach-Object {
+    "  <Default Extension=`"$_`" ContentType=`"application/octet-stream`" />" }) -join "`n"
+$contentTypes = "<?xml version=`"1.0`" encoding=`"utf-8`"?>`n" +
+    "<Types xmlns=`"http://schemas.openxmlformats.org/package/2006/content-types`">`n" +
+    "  <Default Extension=`"rels`" ContentType=`"application/vnd.openxmlformats-package.relationships+xml`" />`n" +
+    "  <Default Extension=`"psmdcp`" ContentType=`"application/vnd.openxmlformats-package.core-properties+xml`" />`n" +
+    "$typeLines`n</Types>`n"
+$rels = "<?xml version=`"1.0`" encoding=`"utf-8`"?>`n" +
+    "<Relationships xmlns=`"http://schemas.openxmlformats.org/package/2006/relationships`">`n" +
+    "  <Relationship Type=`"http://schemas.microsoft.com/packaging/2010/07/manifest`" Target=`"/$packageId.nuspec`" Id=`"Rmanifest`" />`n" +
+    "  <Relationship Type=`"http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties`" Target=`"/package/services/metadata/core-properties/coreprop.psmdcp`" Id=`"Rcoreprop`" />`n" +
+    "</Relationships>`n"
+$psmdcp = "<?xml version=`"1.0`" encoding=`"utf-8`"?>`n" +
+    "<coreProperties xmlns:dc=`"http://purl.org/dc/elements/1.1/`" xmlns:dcterms=`"http://purl.org/dc/terms/`" xmlns:xsi=`"http://www.w3.org/2001/XMLSchema-instance`" xmlns=`"http://schemas.openxmlformats.org/package/2006/metadata/core-properties`">`n" +
+    "  <dc:creator>shrec</dc:creator>`n" +
+    "  <dc:identifier>$packageId</dc:identifier>`n" +
+    "  <version>$Version</version>`n" +
+    "  <lastModifiedBy>libbitcoin packaging pipeline</lastModifiedBy>`n" +
+    "</coreProperties>`n"
+
+$utf8 = New-Object System.Text.UTF8Encoding($true)
+$fs = [System.IO.File]::Create($nupkg)
+$zip = New-Object System.IO.Compression.ZipArchive($fs, [System.IO.Compression.ZipArchiveMode]::Create)
+try {
+    foreach ($part in @(
+        @{ n = "[Content_Types].xml"; c = $contentTypes },
+        @{ n = "_rels/.rels"; c = $rels },
+        @{ n = "package/services/metadata/core-properties/coreprop.psmdcp"; c = $psmdcp })) {
+        $e = $zip.CreateEntry($part.n, [System.IO.Compression.CompressionLevel]::Optimal)
+        $s = $e.Open(); $b = $utf8.GetBytes($part.c); $s.Write($b, 0, $b.Length); $s.Dispose()
+    }
+    foreach ($f in $payload) {
+        $name = $f.FullName.Substring($stage.Length + 1).Replace('\', '/')
+        $e = $zip.CreateEntry($name, [System.IO.Compression.CompressionLevel]::Optimal)
+        $s = $e.Open(); $in = [System.IO.File]::OpenRead($f.FullName)
+        try { $in.CopyTo($s) } finally { $in.Dispose(); $s.Dispose() }
+    }
+}
+finally { $zip.Dispose(); $fs.Dispose() }
 Copy-Item $nupkg "$stage\" -Force
 
 if ($Install) {
