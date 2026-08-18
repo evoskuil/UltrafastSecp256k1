@@ -93,6 +93,20 @@ if ($dumpbin) {
                 "engine $crt static flavor is not /GL (does not force consumer LTCG)"
         }
     }
+    # The engine must be shim-free: in coexistence mode (Option-secp256k1=true)
+    # the engine is linked next to the REAL libsecp256k1, so an engine lib that
+    # defines secp256k1_* C symbols (Mode-B embedded shim TUs) lets the linker
+    # resolve libsecp calls from the engine instead of the real package.
+    # Conversely the staged shim libs must be the REAL Mode-A shim, not the
+    # Mode-B stub (substitute mode would otherwise silently lack the C ABI).
+    foreach ($lib in Get-ChildItem $bin -Filter "fastsecp256k1-*.lib") {
+        $members = lib /list $lib.FullName 2>$null | Out-String
+        Check ($members -notmatch "shim_") "engine lib shim-free: $($lib.Name)"
+    }
+    foreach ($lib in Get-ChildItem $bin -Filter "secp256k1_shim-*.lib") {
+        $members = lib /list $lib.FullName 2>$null | Out-String
+        Check ($members -match "shim_ecdsa") "shim lib carries real shim TUs: $($lib.Name)"
+    }
 }
 else {
     Warn "dumpbin not on PATH: CRT-directive and /GL checks skipped (run from a VS shell)"

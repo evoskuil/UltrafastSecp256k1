@@ -70,10 +70,18 @@ foreach ($key in $Configs) {
             "-DCMAKE_BUILD_TYPE=$($c.type)",
             "-DCMAKE_MSVC_RUNTIME_LIBRARY=$($c.runtime)",
             "-DSECP256K1_BUILD_LIBBITCOIN=ON",
-            # Bridge opt-in solely for the libsecp256k1 shim: consumers that deselect
-            # secp256k1 (Option-secp256k1=false) use UltrafastSecp256k1 as a full
-            # substitute (same headers, same C API). Bridge/CABI byproducts are not staged.
-            "-DSECP256K1_BUILD_LIBBITCOIN_BRIDGE=ON"
+            # The shim must be the STANDALONE Mode-A library (SECP256K1_BUILD_SHIM=OFF,
+            # subdirectory added via SECP256K1_SHIM_BUILD_TESTS=ON; only the shim
+            # target is built). BRIDGE=ON would set SECP256K1_BUILD_SHIM=ON (Mode B),
+            # which embeds the shim TUs INTO fastsecp256k1 and stages a stub shim lib:
+            # in coexistence mode (Option-secp256k1=true) the engine then defines
+            # secp256k1_* C symbols and the linker can resolve them from the engine
+            # instead of the real libsecp256k1 package (observed: bs.exe pulled
+            # shim_ellswift.cpp.obj from the engine for network's BIP-324
+            # secp256k1_ellswift_* calls, hitting unresolved stripped internals).
+            # The consumer contract requires the engine lib to be shim-free.
+            "-DSECP256K1_BUILD_LIBBITCOIN_BRIDGE=OFF",
+            "-DSECP256K1_SHIM_BUILD_TESTS=ON"
         )
         if ($c.wpo) { $cmakeArgs += "-DSECP256K1_MSVC_WPO=ON" }
         if ($c.cuda) {
