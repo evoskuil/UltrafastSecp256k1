@@ -136,10 +136,16 @@ Copy-Item "$repo\compat\libsecp256k1_shim\include\*" "$stage\build\native\includ
 # before publishing this package beyond local/team use.
 Copy-Item "$env:CUDA_PATH\lib\x64\cudart_static.lib" "$stage\build\native\bin\" -Force
 
-# MSBuild integration + schema + nuspec + docs.
-Copy-Item "$PSScriptRoot\UltrafastSecp256k1-vc145.targets" "$stage\build\native\" -Force
+# MSBuild integration + schema + nuspec + docs. The checked-in targets/nuspec are
+# the 4.5.0.0-reference specification; version strings are substituted at stage
+# time so -Version is the single source of the package version (HANDOFF: ship
+# with version-string substitution as the only edit).
+(Get-Content "$PSScriptRoot\UltrafastSecp256k1-vc145.targets" -Raw).
+    Replace("4_5_0_0", $vunder).Replace("4.5.0.0", $Version) |
+    Set-Content "$stage\build\native\UltrafastSecp256k1-vc145.targets" -Encoding utf8 -NoNewline
 Copy-Item "$PSScriptRoot\package.xml" "$stage\build\native\" -Force
-Copy-Item "$PSScriptRoot\$packageId.nuspec" "$stage\" -Force
+(Get-Content "$PSScriptRoot\$packageId.nuspec" -Raw).Replace("4.5.0.0", $Version) |
+    Set-Content "$stage\$packageId.nuspec" -Encoding utf8 -NoNewline
 New-Item -ItemType Directory -Force "$stage\docs" | Out-Null
 Copy-Item "$repo\docs\LIBBITCOIN_INTEGRATION.md" "$stage\docs\" -Force
 
