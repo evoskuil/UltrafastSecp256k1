@@ -32,8 +32,10 @@
                                           "libbitcoin direct entrypoint must not call
                                           the C ABI functions"). */
 
+#include <atomic>
 #include <cstddef>
 #include <cstdint>
+#include <cstdio>
 #include <memory>
 #include <mutex>
 
@@ -84,6 +86,21 @@ secp256k1::gpu::GpuBackend* engine_gpu_backend() {  /* call under g_engine_gpu_b
     return backend.get();
 }
 
+/* One-time stderr notice on the first operational decline AFTER a device was
+ * successfully probed. Rationale: the caller latches GPU availability at
+ * startup, so a mid-run device loss silently degrades every subsequent batch
+ * to the CPU fallback with healthy counters -- a timing run that "used the
+ * GPU" may have finished on the CPU. This is a diagnostic side-channel only:
+ * no API surface, no status code, the decline contract is unchanged. Never
+ * fires in CPU-only operation (startup probe failure returns before it). */
+std::atomic<bool> g_decline_logged{false};
+void log_decline_once() noexcept {
+    if (!g_decline_logged.exchange(true, std::memory_order_acq_rel))
+        std::fprintf(stderr,
+            "secp256k1: GPU column verify declined (operational error); "
+            "CPU fallback engaged.\n");
+}
+
 int engine_gpu_columns_hook(int kind, const std::uint8_t* digests32,
         const std::uint8_t* keys, const std::uint8_t* sigs64,
         std::size_t count, std::uint8_t* out_results) noexcept {
@@ -94,10 +111,14 @@ int engine_gpu_columns_hook(int kind, const std::uint8_t* digests32,
         const secp256k1::gpu::GpuError e = (kind == 0)
             ? b->ecdsa_verify_lbtc_columns(digests32, keys, sigs64, count, out_results)
             : b->schnorr_verify_lbtc_columns(digests32, keys, sigs64, count, out_results);
-        if (e != secp256k1::gpu::GpuError::Ok) return -1;  /* operational error -> CPU fallback (never invalid rows) */
+        if (e != secp256k1::gpu::GpuError::Ok) {
+            log_decline_once();  /* operational error -> CPU fallback (never invalid rows) */
+            return -1;
+        }
         for (std::size_t i = 0; i < count; ++i) if (out_results[i] == 0) return 0;
         return 1;
     } catch (...) {
+        log_decline_once();
         return -1;  /* fall back to CPU; never fabricate a verdict */
     }
 }
