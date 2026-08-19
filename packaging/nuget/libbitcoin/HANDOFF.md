@@ -71,6 +71,12 @@ Key CMake ingredients (see the script for the full argument set):
 - All eight `SECP256K1_GPU_BUILD_*` modules OFF — the upstream-designed "minimal node
   GPU" surface. REQUIRED: the libbitcoin profile strips those kernels, and leaving
   the dispatch flags ON makes the GPU host reference missing kernels at link.
+- `-DSECP256K1_LIBBITCOIN_BIP324=ON` — keeps CPU BIP-324 (ellswift/ChaCha20-
+  Poly1305/HKDF) in the engine, which the minimal profile otherwise strips.
+  REQUIRED: substitute mode (the deployed UF configuration — the real secp256k1
+  package is dropped) serves libbitcoin-network's v2-transport
+  `secp256k1_ellswift_*` calls through the shim, whose engine backing must exist.
+  Independent of the GPU module flags above (GPU BIP-324 kernels stay OFF).
 - Debug configs override `CMAKE_CUDA_FLAGS_DEBUG` to drop `/RTC1` (upstream forces
   `-O3` on CUDA in all configs; nvcc forwards `/O2` to the MSVC host → D8016).
 - `-DCMAKE_MSVC_RUNTIME_LIBRARY=...` per config (upstream defaults /MD).

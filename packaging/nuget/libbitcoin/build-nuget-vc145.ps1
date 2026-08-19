@@ -81,7 +81,13 @@ foreach ($key in $Configs) {
             # secp256k1_ellswift_* calls, hitting unresolved stripped internals).
             # The consumer contract requires the engine lib to be shim-free.
             "-DSECP256K1_BUILD_LIBBITCOIN_BRIDGE=OFF",
-            "-DSECP256K1_SHIM_BUILD_TESTS=ON"
+            "-DSECP256K1_SHIM_BUILD_TESTS=ON",
+            # CPU BIP-324 stays in the engine: substitute mode (the deployed UF
+            # configuration — the real secp256k1 package is dropped) must serve
+            # libbitcoin-network's v2-transport secp256k1_ellswift_* calls via
+            # the shim, whose engine backing is otherwise stripped by the
+            # minimal profile. GPU BIP-324 kernels remain OFF below.
+            "-DSECP256K1_LIBBITCOIN_BIP324=ON"
         )
         if ($c.wpo) { $cmakeArgs += "-DSECP256K1_MSVC_WPO=ON" }
         if ($c.cuda) {

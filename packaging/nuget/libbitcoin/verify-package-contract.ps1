@@ -107,6 +107,20 @@ if ($dumpbin) {
         $members = lib /list $lib.FullName 2>$null | Out-String
         Check ($members -match "shim_ecdsa") "shim lib carries real shim TUs: $($lib.Name)"
     }
+    # Substitute mode drops the real secp256k1 package, so the shim's ellswift
+    # surface (libbitcoin-network v2 transport) must be backed by the engine:
+    # ellswift_decode must be DEFINED in the engine lib (SECTxx), not stripped
+    # by the minimal profile (which would resurface the unresolved-external
+    # class of failure at consumer link).
+    foreach ($crt in "mt-s", "md") {
+        $lib = Get-ChildItem $bin -Filter "fastsecp256k1-x64-*-$crt-*.static.lib" |
+            Select-Object -First 1
+        if ($lib) {
+            $symbols = dumpbin /symbols $lib.FullName 2>$null | Out-String
+            Check ($symbols -match "SECT[0-9A-F]+[^\r\n]*ellswift_decode") `
+                "engine $crt backs shim ellswift (BIP-324 compiled in)"
+        }
+    }
 }
 else {
     Warn "dumpbin not on PATH: CRT-directive and /GL checks skipped (run from a VS shell)"

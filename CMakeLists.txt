@@ -176,6 +176,8 @@ option(SECP256K1_BUILD_LIBBITCOIN_EXAMPLES
 # status, no recoverable GPU error path.
 option(SECP256K1_BUILD_LIBBITCOIN_GPU
        "[libbitcoin] Opt-in GPU column acceleration for direct C++ verify (transparent; CPU fallback when no GPU runtime)" OFF)
+option(SECP256K1_LIBBITCOIN_BIP324
+       "[libbitcoin] Keep CPU BIP-324 (ellswift/ChaCha20-Poly1305/HKDF) in the minimal profile: required for substitute-mode v2 transport" OFF)
 if(SECP256K1_BUILD_LIBBITCOIN)
     # libsecp256k1-compatible contract (engine-level; CT enforced, strict ABI).
     set(SECP256K1_REQUIRE_CT   ON)
@@ -196,7 +198,17 @@ if(SECP256K1_BUILD_LIBBITCOIN)
     set(SECP256K1_BUILD_ADAPTOR  OFF)
     set(SECP256K1_BUILD_WALLET   OFF)
     set(SECP256K1_BUILD_BCH      OFF)
-    set(SECP256K1_BUILD_BIP324   OFF)
+    # CPU BIP-324 (ellswift + ChaCha20-Poly1305 + HKDF) is opt-in for this
+    # profile: substitute mode (Option-secp256k1=false) must serve
+    # libbitcoin-network's v2-transport secp256k1_ellswift_* calls through the
+    # shim, which requires the engine backing. The plain set() below shadows a
+    # -DSECP256K1_BUILD_BIP324 cache entry, hence the dedicated opt-in flag.
+    # GPU BIP-324 kernels remain independently OFF (SECP256K1_GPU_BUILD_BIP324).
+    if(SECP256K1_LIBBITCOIN_BIP324)
+        set(SECP256K1_BUILD_BIP324 ON)
+    else()
+        set(SECP256K1_BUILD_BIP324 OFF)
+    endif()
     set(SECP256K1_BUILD_PIPPENGER ON)
     set(SECP256K1_BUILD_TESTS    OFF)
     set(SECP256K1_BUILD_BENCH    OFF)
